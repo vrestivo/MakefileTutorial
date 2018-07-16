@@ -1,13 +1,13 @@
-# Pattern rules
+# Header file inclusion
 
-# As your projects grow larger
-# there will be a need to separate the
-# build process. For example, while unit testing
-# you may want to separate the compilation of
-# .cpp files into .o files and linking them
-# with unit test libraries into a test runner.
-# Pattern rules allow you to to that.
-# see line 59
+# This example demonstrates inclustion of header files.
+# A new class 'TwoPlusTwoIsFive' was added to
+# demonstrate the concept. It has a header file
+# stored in 'include/TwoPlusTwoIsFive.h'
+# and a source file in 'src/TwoPlusTwoIsFive.cpp'
+
+### Please note the addition of new varables:
+# $(INCDIR) $(INC) and their use. 
 
 # specify compiler to use
 CXX := g++-7
@@ -16,6 +16,8 @@ CXX := g++-7
 
 # source file directory
 SRCDIR := src
+# include directory with local .h files
+INCDIR := include
 # build output directory for .o files
 BUILDDIR := build
 # build output directory for final executable
@@ -26,11 +28,10 @@ TARGET := $(BINDIR)/runme
 SRCFILES = $(wildcard $(SRCDIR)/*.cpp)
 # list of expected object files
 OBJ := $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SRCFILES));
-
+# specify compiler include directives
+INC := -I $(INCDIR)
 
 # final executable target
-### NOTE: by default make builds the
-# first target it finds
 binary: $(TARGET)
 
 # build .o files only for the sake of 
@@ -40,24 +41,10 @@ objects: $(OBJ)
 $(TARGET): $(OBJ)
 	$(CXX) -o $(TARGET) $(OBJ)
 
-### PATTERN RULE EXAMPLE:
-# Pattern rules take form of:
-# output_pattern: input_pattern
-# <TAB> recepie rules
-
-### NOTE: pattern rules are applied one pattern
-# at a time.
-#
-# $(BUILDDIR)/%.o - match every file in the 'bin'
-# directorythat ends with '.o'
-#
-# $(SRCDIR)/%.cpp - match every file in the 'src'
-# directory that ends with '.cpp'
-#
-# $@ - match every output item
-# $^ - match every prerequisite item
+### NOTE the addition of include flags
+# as $(INC) variable at the end of the recepie
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
-	$(CXX) -o $@ -c $^
+	$(CXX) -o $@ -c $^ $(INC)
 
 # prints list of source files
 printSources:
