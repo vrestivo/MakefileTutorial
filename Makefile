@@ -1,19 +1,25 @@
-# Header file inclusion
+# Unit test build Example
 
-# This example demonstrates inclustion of header files.
-# A new class 'TwoPlusTwoIsFive' was added to
-# demonstrate the concept. It has a header file
-# stored in 'include/TwoPlusTwoIsFive.h'
-# and a source file in 'src/TwoPlusTwoIsFive.cpp'
+# This example demonstrates integration of 
+# Google Test framework and creation of test
+# targets.
+# Google Test dependencies (header files
+# and static libraries) are located in the
+# 'gtest' directory.
 
-### Please note the addition of new varables:
-# $(INCDIR) $(INC) and their use. 
+### NOTE: build targets which exclude main.cpp
+# and main.o were added in order to maintain
+# code modularity for unit testing purposes 
 
 # specify compiler to use
 CXX := g++-7
 
-### Reorganize project stucture
 
+################################################
+### MAIN PROGRAM DIRECTORY STRUCTURE-RELATED ###
+################################################
+# main base name
+MAINBASE := main
 # source file directory
 SRCDIR := src
 # include directory with local .h files
@@ -25,27 +31,79 @@ BINDIR := bin
 # final executable target
 TARGET := $(BINDIR)/runme
 # list of expected source files
-SRCFILES = $(wildcard $(SRCDIR)/*.cpp)
+SRCFILES := $(wildcard $(SRCDIR)/*.cpp)
 # list of expected object files
-OBJ := $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SRCFILES));
+OBJ := $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SRCFILES))
 # specify compiler include directives
 INC := -I $(INCDIR)
+# filter out main for unit testing
+MAINOBJ := $(BUILDDIR)/$(MAINBASE).o
+MAINSRC := $(SRCDIR)/$(MAINBASE).cpp
+SRCNOMAIN := $(filter-out $(MAINSRC), $(SRCFILES)) 
+OBJNOMAIN := $(filter-out $(MAINOBJ), $(OBJ)) 
 
-# final executable target
+
+
+########################################
+### TEST DIRECTORY STRUCTURE-RELATED ###
+########################################
+TESTDIR := test
+TESTSRCDIR := $(TESTDIR)/src
+TESTBUILDDIR := $(TESTDIR)/build
+TESTBINDIR := $(TESTDIR)/bin
+TESTRUNNER := $(TESTBINDIR)/runner
+TESTSRCFILES := $(wildcard $(TESTSRCDIR)/*.cpp)
+TESTOBJ := $(patsubst $(TESTSRCDIR)/%.cpp, $(TESTBUILDDIR)/%.o, $(TESTSRCFILES))
+TESTINC := -I gtest/include $(INC)
+TESTLINK := -L gtest/lib -lgtest -pthread
+
+
+
+####################################
+### MAIN PROGRAM-RELATED TARGETS ###
+####################################
+#Final executable target
 binary: $(TARGET)
-
-# build .o files only for the sake of 
-# split build example
-objects: $(OBJ)
 
 $(TARGET): $(OBJ)
 	$(CXX) -o $(TARGET) $(OBJ)
 
-### NOTE the addition of include flags
+### NOTE: the addition of include flags
 # as $(INC) variable at the end of the recepie
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CXX) -o $@ -c $^ $(INC)
 
+
+
+############################
+### TEST-RELATED TARGETS ###
+############################
+test: buildObjectsNoMain $(TESTOBJ)
+	$(CXX) -o $(TESTRUNNER) $(TESTOBJ) $(OBJNOMAIN) $(TESTLINK)
+
+$(TESTBUILDDIR)/%.o: $(TESTSRCDIR)/%.cpp
+	$(CXX) -o $@ -c $^ $(TESTINC)
+
+
+### NOTE how $(call) function is used
+# to call a user-defined $(buildProgObject) function 
+buildObjectsNoMain:
+	@echo building objects excluding main.o
+	$(foreach source, $(SRCNOMAIN), $(call buildProgObject, $(source)))
+
+# function to build program objects one at at time
+define buildProgObject
+	$(eval src := $(notdir $1))
+	@echo compiling $(src)
+	$(CXX) -o $(BUILDDIR)/$(src:.cpp=.o) -c $(SRCDIR)/$(src) $(INC)
+
+endef
+
+
+
+###########################
+### DEBUG PRINT TARGETS ###
+###########################
 # prints list of source files
 printSources:
 	@echo $(SRCFILES)
@@ -54,8 +112,15 @@ printSources:
 printOjects:
 	@echo $(OBJ)
 
+printTestSources:
+	@echo $(TESTSRCFILES)
 
-clean: cleanObjects cleanBinary
+
+
+#####################
+### CLEAN TARGETS ###
+#####################
+clean: cleanObjects cleanBinary testClean
 
 #deletes object files
 cleanObjects:
@@ -67,12 +132,16 @@ cleanBinary:
 	@echo removing binary: $(TARGET)
 	rm $(TARGET)
 
-### IMPORTANT NOTE:
-# DO NOT use rules like the one below:
-# 'rm -rf $(DIR_NAME)/*'
-# If $(DIR_NAME) is no loger a valid variable,
-# or make cannot understand it,
-# it will interpret the rule as follows:
-# "rm -rf /*' which means delete everything
-# on your file system.
+testClean: cleanTestObjects cleanTestRunner
+
+# deletes test pbjects
+cleanTestObjects:
+	@echo removing test objects:
+	rm $(TESTOBJ)
+
+# deletes test binary
+cleanTestRunner:
+	@echo removing test runner:
+	rm $(TESTRUNNER)
+
 
