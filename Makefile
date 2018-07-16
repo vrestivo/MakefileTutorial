@@ -1,37 +1,63 @@
-# Pattern matching and clean targets
+# Pattern rules
 
+# As your projects grow larger
+# there will be a need to separate the
+# build process. For example, while unit testing
+# you may want to separate the compilation of
+# .cpp files into .o files and linking them
+# with unit test libraries into a test runner.
+# Pattern rules allow you to to that.
+# see line 59
+
+# specify compiler to use
 CXX := g++-7
-TARGET := runme # later refered to as $(TARGET)
 
-# When working on a larget project, 
-# one can expect multiple target prerequisites.
-# Specifying them by file name can be tedious,
-# error-prone, and plain silly since files can
-# be renamed at any time.
+### Reorganize project stucture
 
-# We can use pattern matching functions
-# to specify multiple input requirements
-# and avoid issues listed above.
-
-# Functions in make take the following form
-# $(function_name argument1, argument2, agumentN)
-
-# lets specify expected source files using
-# pattern matching 'wildcard' function
-# this function will match all files ending with
-# '.cpp' in current directory
-SRCFILES = $(wildcard *.cpp)
+# source file directory
+SRCDIR := src
+# build output directory for .o files
+BUILDDIR := build
+# build output directory for final executable
+BINDIR := bin
+# final executable target
+TARGET := $(BINDIR)/runme
+# list of expected source files
+SRCFILES = $(wildcard $(SRCDIR)/*.cpp)
+# list of expected object files
+OBJ := $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SRCFILES));
 
 
-# 'patsubst' function takes the following form:
-# $(patsubst pattern, replacement, input_variable)
-# '%' is a wildcard used to match a pattern.
-# Lets use 'patsubst' function to specify required
-# .o object files to build the final binary
-OBJ := $(patsubst %.cpp, %.o, $(SRCFILES));
+# final executable target
+### NOTE: by default make builds the
+# first target it finds
+binary: $(TARGET)
 
-(TARGET): $(OBJ)
+# build .o files only for the sake of 
+# split build example
+objects: $(OBJ)
+
+$(TARGET): $(OBJ)
 	$(CXX) -o $(TARGET) $(OBJ)
+
+### PATTERN RULE EXAMPLE:
+# Pattern rules take form of:
+# output_pattern: input_pattern
+# <TAB> recepie rules
+
+### NOTE: pattern rules are applied one pattern
+# at a time.
+#
+# $(BUILDDIR)/%.o - match every file in the 'bin'
+# directorythat ends with '.o'
+#
+# $(SRCDIR)/%.cpp - match every file in the 'src'
+# directory that ends with '.cpp'
+#
+# $@ - match every output item
+# $^ - match every prerequisite item
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
+	$(CXX) -o $@ -c $^
 
 # prints list of source files
 printSources:
@@ -42,11 +68,16 @@ printOjects:
 	@echo $(OBJ)
 
 
-# deletes all build outputs
-clean:
+clean: cleanObjects cleanBinary
+
+#deletes object files
+cleanObjects:
 	@echo removing objects: $(OBJ)
-	@echo removing binary: $(TARGET)
 	rm $(OBJ)	
+
+# deletes binary
+cleanBinary:
+	@echo removing binary: $(TARGET)
 	rm $(TARGET)
 
 ### IMPORTANT NOTE:
